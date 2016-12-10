@@ -3,9 +3,9 @@ package org.greenrd.seraphim
 import java.io.{File, PrintWriter}
 
 import org.apache.commons.io.FileUtils
-import org.scalatest.FunSpec
+import org.scalatest.{FunSpec, Matchers}
 
-class BaseCommitTest extends FunSpec {
+class BaseCommitTest extends FunSpec with Matchers{
 
   private val gitRepoName = "temp-git"
 
@@ -35,21 +35,42 @@ class BaseCommitTest extends FunSpec {
     gitRepo.gitCommand("commit", "-m", gitMessage)
   }
 
+  private def setupTwoCommitRepo(): String = {
+    prepareGitRepo()
+    gitRepo.gitCommand("init")
+    createFile()
+    addAndCommitToGit("new file added")
+    val baseCommit = gitRepo.gitCommand("rev-parse", "HEAD")
+    gitRepo.gitCommand("checkout", "-b", "branch")
+    modifyFile()
+    addAndCommitToGit("file changed")
+    baseCommit
+  }
+
   describe("BaseCommit") {
 
     it("Finds a base-commit for a branch") {
-      prepareGitRepo()
-
-      gitRepo.gitCommand("init")
-      createFile()
-      addAndCommitToGit("new file added")
-      val baseCommit = gitRepo.gitCommand("rev-parse", "HEAD")
-
-      gitRepo.gitCommand("checkout", "-b", "branch")
-      modifyFile()
-      addAndCommitToGit("file changed")
-
-      assert(BaseCommit(gitRepo).baseCommitForCurrentBranch() === baseCommit)
+      val baseCommit = setupTwoCommitRepo()
+      BaseCommit(gitRepo).baseCommitForCurrentBranch("master") should be (baseCommit)
     }
+  }
+
+  describe("Diff") {
+    it("Finds the diff between two git revisions") {
+      setupTwoCommitRepo()
+      val a = Diff(BaseCommit(gitRepo).baseCommitForCurrentBranch("master"), "HEAD", gitRepo).run()
+      val seq = a.split('\n')
+      seq.head +: seq.drop(2) should be (
+        Seq(
+          "diff --git a/test.txt b/test.txt",
+          "--- a/test.txt",
+          "+++ b/test.txt",
+          "@@ -0,0 +1 @@",
+          "+hello",
+          "\\ No newline at end of file"
+        )
+      )
+    }
+
   }
 }
