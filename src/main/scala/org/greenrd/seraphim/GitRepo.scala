@@ -14,7 +14,7 @@ class GitRepo (val path: File) extends LazyLogging {
   require(path.isDirectory)
 
   private def runProcess(processBuilder: ProcessBuilder): String =
-    processBuilder.lineStream.mkString("")
+    processBuilder.lineStream.mkString("\n")
 
  def gitCommand(command: String*): String =
    runProcess(Process("git" +: command, path))
