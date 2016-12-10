@@ -49,6 +49,11 @@ class BaseCommitTest extends FunSpec with Matchers{
 
   describe("BaseCommit") {
 
+    it("Finds a base-commit between 2 revisions"){
+      val baseCommit = setupTwoCommitRepo()
+      BaseCommit(gitRepo).baseCommitBetweenRevisions("master", "HEAD") should be (baseCommit)
+    }
+
     it("Finds a base-commit for a branch") {
       val baseCommit = setupTwoCommitRepo()
       BaseCommit(gitRepo).baseCommitForCurrentBranch("master") should be (baseCommit)
